@@ -50,8 +50,7 @@ function AuthForm({ type }) {
       toast.success(res.data.message);
       navigate("/");
     } catch (error) {
-      toast.error(error.response.data.message);
-      console.log(error.response);
+      toast.error(error.data.message);
     }
   }
   return (
