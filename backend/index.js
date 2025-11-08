@@ -6,17 +6,21 @@ const blogRoute = require("./routes/blogRoutes");
 const cloudinaryConfig = require("./config/cloudinaryConfig");
 const { PORT, FRONTEND_URL } = require("./config/dotenv.config");
 const app = express();
-require("dotenv").config()
-const port = PORT
+require("dotenv").config();
+const port = PORT;
 
 app.use(express.json());
-app.use(cors({origin : FRONTEND_URL}));
+app.use(cors({ origin: "*" }));
 
 app.use("/api/v1", userRoute);
 app.use("/api/v1", blogRoute);
 
+app.get("/", (req, res) => {
+  res.send("Hello ji Kaise ho");
+});
+
 app.listen(port, () => {
   console.log("Server Started");
   connectDb();
-  cloudinaryConfig()
+  cloudinaryConfig();
 });
