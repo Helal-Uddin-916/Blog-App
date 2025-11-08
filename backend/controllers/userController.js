@@ -433,7 +433,7 @@ async function googleAuth(req, res) {
           user: {
             id: user._id,
             name: user.name,
-            email: newUser.email,
+            email: user.email,
             profilePic: user.profilePic,
             username: user.username,
             bio: user.bio,
