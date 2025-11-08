@@ -433,8 +433,12 @@ async function googleAuth(req, res) {
           user: {
             id: user._id,
             name: user.name,
-            email: user.email,
+            email: newUser.email,
             profilePic: user.profilePic,
+            username: user.username,
+            bio: user.bio,
+            showlikeBlogs: user.showlikeBlogs,
+            showSavedBlogs: user.showSavedBlogs,
             token,
           },
         });
@@ -445,18 +449,21 @@ async function googleAuth(req, res) {
         });
       }
     }
+    const username = email.split("@")[0] + randomUUID();
 
     let newUser = await User.create({
       name,
       email,
       googleAuth: true,
       isVerify: true,
+      username,
     });
 
     let token = await generateJWT({
       email: newUser.email,
       id: newUser._id,
     });
+
     return res.status(200).json({
       Sucess: true,
       message: "Account Registered sucessfully",
@@ -464,6 +471,11 @@ async function googleAuth(req, res) {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        profilePic: newUser.profilePic,
+        username: newUser.username,
+        bio: newUser.bio,
+        showlikeBlogs: newUser.showlikeBlogs,
+        showSavedBlogs: newUser.showSavedBlogs,
         token,
       },
     });
