@@ -416,11 +416,8 @@ async function verifyEmail(req, res) {
 async function googleAuth(req, res) {
   try {
     const { accessToken } = req.body;
-    console.log(req.body);
     const response = await getAuth().verifyIdToken(accessToken);
     const { name, email } = response;
-    console.log(name);
-    console.log(email);
     let user = await User.findOne({ email });
 
     if (user) {

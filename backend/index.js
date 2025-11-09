@@ -7,7 +7,7 @@ const cloudinaryConfig = require("./config/cloudinaryConfig");
 const { PORT, FRONTEND_URL } = require("./config/dotenv.config");
 const app = express();
 require("dotenv").config();
-const port = PORT || 5000;
+const port = PORT;
 
 app.use(express.json());
 app.use(cors({ origin: "*" }));
