@@ -2,7 +2,7 @@ const User = require("../models/userSchema");
 const bcrypt = require("bcrypt");
 const { generateJWT, verifyJWT } = require("../utils/generateToken");
 const transporter = require("../utils/transporter");
-const admin = require("firebase-admin");
+const admin = require("../config/firebaseAdmin");
 const { getAuth } = require("firebase-admin/auth");
 const ShortUniqueId = require("short-unique-id");
 const { deleteImage, uploadImage } = require("../utils/uploadImage");
@@ -42,21 +42,21 @@ const { randomUUID } = new ShortUniqueId({ length: 5 });
 //   }),
 // });
 
-admin.initializeApp({
-  credential: admin.credential.cert({
-    type: FIREBASE_TYPE,
-    project_id: FIREBASE_PROJECT_ID,
-    private_key_id: FIREBASE_PRIVATE_KEY_ID,
-    private_key: FIREBASE_PRIVATE_KEY,
-    client_email: FIREBASE_CLIENT_EMAIL,
-    client_id: FIREBASE_CLIENT_ID,
-    auth_uri: FIREBASE_AUTH_URI,
-    token_uri: FIREBASE_TOKEN_URI,
-    auth_provider_x509_cert_url: FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-    client_x509_cert_url: FIREBASE_CLIENT_X509_CERT_URL,
-    universe_domain: FIREBASE_UNIVERSAL_DOMAIN,
-  }),
-});
+// admin.initializeApp({
+//   credential: admin.credential.cert({
+//     type: FIREBASE_TYPE,
+//     project_id: FIREBASE_PROJECT_ID,
+//     private_key_id: FIREBASE_PRIVATE_KEY_ID,
+//     private_key: FIREBASE_PRIVATE_KEY,
+//     client_email: FIREBASE_CLIENT_EMAIL,
+//     client_id: FIREBASE_CLIENT_ID,
+//     auth_uri: FIREBASE_AUTH_URI,
+//     token_uri: FIREBASE_TOKEN_URI,
+//     auth_provider_x509_cert_url: FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+//     client_x509_cert_url: FIREBASE_CLIENT_X509_CERT_URL,
+//     universe_domain: FIREBASE_UNIVERSAL_DOMAIN,
+//   }),
+// });
 
 async function deleteUser(req, res) {
   const { id } = req.params;
@@ -104,7 +104,7 @@ async function updateUser(req, res) {
 
     if (image) {
       const { secure_url, public_id } = await uploadImage(
-        `data:image/jpeg;base64,${image.buffer.toString("base64")}`
+        `data:image/jpeg;base64,${image.buffer.toString("base64")}`,
       );
       user.profilePic = secure_url;
       user.profilePicId = public_id;
@@ -254,7 +254,7 @@ async function login(req, res) {
       });
     }
     const checkforexistingUser = await User.findOne({ email }).select(
-      "password isVerify name email profilePic username bio showlikeBlogs showSavedBlogs"
+      "password isVerify name email profilePic username bio showlikeBlogs showSavedBlogs",
     );
     if (!checkforexistingUser) {
       return res.status(400).json({
@@ -273,7 +273,7 @@ async function login(req, res) {
 
     let checkforPass = await bcrypt.compare(
       password,
-      checkforexistingUser.password
+      checkforexistingUser.password,
     );
     if (!checkforPass) {
       return res.status(400).json({
@@ -392,7 +392,7 @@ async function verifyEmail(req, res) {
     const user = await User.findByIdAndUpdate(
       id,
       { isVerify: true },
-      { new: true }
+      { new: true },
     );
     if (!user) {
       return res.status(400).json({
@@ -415,43 +415,58 @@ async function verifyEmail(req, res) {
 
 async function googleAuth(req, res) {
   try {
-    const { accessToken } = req.body;
-    const response = await getAuth().verifyIdToken(accessToken);
-    const { name, email } = response;
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: "Google credential missing",
+      });
+    }
+
+    // ✅ VERIFY ID TOKEN
+    const decodedToken = await getAuth().verifyIdToken(credential);
+    console.log("TOKEN AUD:", decodedToken.aud);
+    console.log("ENV PROJECT:", process.env.FIREBASE_PROJECT_ID);
+
+    const { name, email } = decodedToken;
+
     let user = await User.findOne({ email });
 
     if (user) {
-      if (user.googleAuth) {
-        let token = await generateJWT({
-          email: user.email,
-          id: user._id,
-        });
-
-        return res.status(200).json({
-          Sucess: true,
-          message: "Account Logged in sucessfully",
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            profilePic: user.profilePic,
-            username: user.username,
-            bio: user.bio,
-            showlikeBlogs: user.showlikeBlogs,
-            showSavedBlogs: user.showSavedBlogs,
-            token,
-          },
-        });
-      } else {
+      if (!user.googleAuth) {
         return res.status(400).json({
-          Sucess: true,
-          message: "Email already registered. Try Loggin in without google",
+          success: false,
+          message: "Email already registered without Google",
         });
       }
+
+      const token = await generateJWT({
+        email: user.email,
+        id: user._id,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Logged in successfully",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          profilePic: user.profilePic,
+          username: user.username,
+          bio: user.bio,
+          showlikeBlogs: user.showlikeBlogs,
+          showSavedBlogs: user.showSavedBlogs,
+          token,
+        },
+      });
     }
+
+    // NEW USER
     const username = email.split("@")[0] + randomUUID();
 
-    let newUser = await User.create({
+    const newUser = await User.create({
       name,
       email,
       googleAuth: true,
@@ -459,14 +474,14 @@ async function googleAuth(req, res) {
       username,
     });
 
-    let token = await generateJWT({
+    const token = await generateJWT({
       email: newUser.email,
       id: newUser._id,
     });
 
     return res.status(200).json({
-      Sucess: true,
-      message: "Account Registered sucessfully",
+      success: true,
+      message: "Account created successfully",
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -480,10 +495,10 @@ async function googleAuth(req, res) {
       },
     });
   } catch (err) {
-    return res.status(500).json({
+    console.error("Google Auth Error:", err.message);
+    return res.status(401).json({
       success: false,
-      message: "Please try again",
-      error: err.message,
+      message: "Invalid Google token",
     });
   }
 }

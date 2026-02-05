@@ -1,31 +1,42 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-function usePagination(path, queryParams = {}, limit = 1, page = 1) {
+function usePagination(path, queryParams = {}, limit = 4, page = 1) {
   const [blogs, setBlogs] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [hashMore, setHashMore] = useState(true);
+
   useEffect(() => {
-    async function fetchSearchBlogs() {
+    async function fetchBlogs() {
       try {
+        setLoading(true);
+
         const res = await axios.get(
           `${import.meta.env.VITE_BACKEND_URL}/${path}`,
           {
             params: { ...queryParams, limit, page },
-          }
+          },
         );
-        setBlogs((prev) => [...prev, ...res.data.blogs]);
-        setHashMore(res.data.hashMore);
+
+        const newBlogs = res.data.blogs || [];
+
+        setBlogs((prev) => (page === 1 ? newBlogs : [...prev, ...newBlogs]));
+
+        setHasMore(res.data.hasMore);
       } catch (error) {
         setBlogs([]);
-        setHashMore(false);
-        setMessage(error.response.data.message);
+        setHasMore(false);
+        setMessage(error?.response?.data?.message || "Error");
+      } finally {
+        setLoading(false);
       }
     }
-    fetchSearchBlogs();
-  }, [page]);
 
-  return { blogs, hashMore, message };
+    fetchBlogs();
+  }, [page, path]);
+
+  return { blogs, hasMore, loading, message };
 }
 
 export default usePagination;

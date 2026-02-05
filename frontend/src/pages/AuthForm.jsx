@@ -22,7 +22,7 @@ function AuthForm({ type }) {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/${type}`,
-        userdata
+        userdata,
       );
       if (type == "signup") {
         toast.success(res.data.message);
@@ -39,20 +39,24 @@ function AuthForm({ type }) {
 
   async function handleGoogleAuth() {
     try {
-      let data = await googleAuth();
+      const data = await googleAuth();
+
+      const credential = await data.user.getIdToken();
+      console.log("ID TOKEN:", credential);
+
       const res = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/google-auth`,
-        {
-          accessToken: data.user.accessToken,
-        }
+        { credential },
       );
+
       dispatch(login(res.data.user));
       toast.success(res.data.message);
       navigate("/");
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error?.response?.data?.message || "Google login failed");
     }
   }
+
   return (
     <div className="w-full">
       <div className="max-w-[350px] bg-gray-200 p-4 rounded-xl flex flex-col items-center gap-5 mt-52 mx-auto">

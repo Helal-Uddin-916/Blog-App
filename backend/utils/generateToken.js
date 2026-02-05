@@ -1,24 +1,47 @@
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config/dotenv.config");
 require("dotenv").config();
 
+const { JWT_SECRET } = process.env;
+
+/**
+ * Generate JWT Token
+ * @param {Object} payload - user payload (id, email etc.)
+ * @returns {String} token
+ */
 async function generateJWT(payload) {
-  let token = await jwt.sign(payload, JWT_SECRET);
-  return token;
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: "7d", // ✅ token valid for 7 days
+  });
 }
 
+/**
+ * Verify JWT Token
+ * @param {String} token
+ * @returns {Object|false}
+ */
 async function verifyJWT(token) {
   try {
-    let data = await jwt.verify(token, JWT_SECRET);
-    return data;
+    return jwt.verify(token, JWT_SECRET);
   } catch (error) {
     return false;
   }
 }
 
+/**
+ * Decode JWT without verification (not for auth)
+ * @param {String} token
+ * @returns {Object|null}
+ */
 async function decodeJWT(token) {
-  let decoded = await jwt.decode(token);
-  return decoded;
+  try {
+    return jwt.decode(token);
+  } catch (error) {
+    return null;
+  }
 }
 
-module.exports = { generateJWT, verifyJWT, decodeJWT };
+module.exports = {
+  generateJWT,
+  verifyJWT,
+  decodeJWT,
+};

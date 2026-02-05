@@ -43,8 +43,8 @@ async function createBlog(req, res) {
       if (block.type === "image") {
         const { secure_url, public_id } = await uploadImage(
           `data:image/jpeg;base64,${images[imageIndex].buffer.toString(
-            "base64"
-          )}`
+            "base64",
+          )}`,
         );
         block.data.file = {
           url: secure_url,
@@ -55,7 +55,7 @@ async function createBlog(req, res) {
     }
 
     const { secure_url, public_id } = await uploadImage(
-      `data:image/jpeg;base64,${image[0].buffer.toString("base64")}`
+      `data:image/jpeg;base64,${image[0].buffer.toString("base64")}`,
     );
 
     // const blogId = title.toLowerCase().replace(/ +/g, "-")
@@ -94,7 +94,7 @@ async function getBlogbyid(req, res) {
     const blogs = await Blog.findOne({ blogId })
       .populate({
         path: "creator",
-        select: "name email followers username",
+        select: "name email followers username profilePic",
       })
       .populate({
         path: "comments",
@@ -147,11 +147,10 @@ async function getBlogbyid(req, res) {
 
 async function getAllBlog(req, res) {
   try {
-    // const blogs = await Blog.find({draft : false}).populate("creator");
-
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
     const skip = (page - 1) * limit;
+
     const blogs = await Blog.find({ draft: false })
       .populate({
         path: "creator",
@@ -174,7 +173,7 @@ async function getAllBlog(req, res) {
     return res.status(200).json({
       message: "Blogs fetched Successfully",
       blogs,
-      hashMore: skip + limit < totalBlogs,
+      hasMore: skip + blogs.length < totalBlogs, // ✅ FIXED
     });
   } catch (error) {
     return res.status(500).json({
@@ -203,7 +202,8 @@ async function updateBlog(req, res) {
     let imagedToDelete = blog.content.blocks
       .filter((block) => block.type == "image")
       .filter(
-        (block) => !existingImages.find(({ url }) => url == block.data.file.url)
+        (block) =>
+          !existingImages.find(({ url }) => url == block.data.file.url),
       )
       .map((block) => block.data.file.imageId);
 
@@ -219,7 +219,7 @@ async function updateBlog(req, res) {
           const { secure_url, public_id } = await uploadImage(
             `data:image/jpeg;base64,${req.files.images[
               imageIndex
-            ].buffer.toString("base64")}`
+            ].buffer.toString("base64")}`,
           );
           block.data.file = {
             url: secure_url,
@@ -233,7 +233,7 @@ async function updateBlog(req, res) {
     if (req.files.image) {
       await deleteImage(blog.imageId);
       const { secure_url, public_id } = await uploadImage(
-        `data:image/jpeg;base64,${req.files.image[0].buffer.toString("base64")}`
+        `data:image/jpeg;base64,${req.files.image[0].buffer.toString("base64")}`,
       );
       blog.image = secure_url;
       blog.imageId = public_id;
@@ -242,7 +242,7 @@ async function updateBlog(req, res) {
     const updatedblogs = await Blog.findOneAndUpdate(
       { blogId: id },
       { title, description, draft, content, tags },
-      { new: true }
+      { new: true },
     );
 
     await blog.save();
@@ -402,7 +402,7 @@ async function searchBlogs(req, res) {
     return res.status(200).json({
       message: "Blogs fetched Successfully",
       blogs,
-      hashMore: skip + limit < totalBlogs,
+      hasMore: skip + blogs.length < totalBlogs,
     });
   } catch (error) {
     return res.status(500).json({

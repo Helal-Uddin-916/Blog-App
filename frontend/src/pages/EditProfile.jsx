@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../utils/userSlice";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 function EditProfile() {
   const {
@@ -30,6 +30,7 @@ function EditProfile() {
   });
 
   const [isBtnDisabled, setisBtnDisabled] = useState(true);
+  const navigate = useNavigate();
 
   function handleChange(e) {
     const { value, name, files } = e.target;
@@ -59,10 +60,11 @@ function EditProfile() {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       toast.success(res.data.message);
       dispatch(login({ ...res.data.user, token, email, id: userId }));
+      navigate("/");
     } catch (error) {
       toast.error(error.response.data.message);
     }

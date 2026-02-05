@@ -2,33 +2,32 @@ const { verifyJWT } = require("../utils/generateToken");
 
 async function verifyUser(req, res, next) {
   try {
-    let token = req.headers.authorization.split(" ")[1];
-    if (!token) {
-      return res.status(200).json({
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
         success: false,
-        message: "Please sign in",
+        message: "Unauthorized. Please sign in.",
       });
     }
-    try {
-      let user = await verifyJWT(token);
-      if (!user) {
-        return res.status(400).json({
-          success: false,
-          message: "Please Sign in",
-        });
-      }
-      req.user = user.id;
-      next();
-    } catch (error) {
-      res.status(500).json({
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = await verifyJWT(token);
+
+    if (!decoded) {
+      return res.status(401).json({
         success: false,
-        message: error.message,
+        message: "Invalid or expired token",
       });
     }
+
+    req.user = decoded.id;
+    next();
   } catch (error) {
-    res.status(500).json({
+    return res.status(401).json({
       success: false,
-      message: "Token Missing",
+      message: "Authentication failed",
     });
   }
 }
